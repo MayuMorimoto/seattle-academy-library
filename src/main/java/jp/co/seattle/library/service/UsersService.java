@@ -3,6 +3,7 @@ package jp.co.seattle.library.service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Controller;
 
@@ -42,12 +43,17 @@ public class UsersService {
      * @param password パスワード
      * @return ユーザー情報
      */
-    public UserInfo selectUserInfo(String email, String password) {
-        // TODO SQL生成
-        String sql = "";
+    public UserInfo selectUserInfo(String email, String password) throws EmptyResultDataAccessException{
+        //SQL生成
+        String sql = "select * from users where email ='" + email + "' and password ='" + password + "';";
+        try {
+        	UserInfo selectedUserInfo = jdbcTemplate.queryForObject(sql, new UserCountRowMapper());
+        	return selectedUserInfo;
+        }catch(EmptyResultDataAccessException e) {
+        	return null;
+        }
 
-        UserInfo selectedUserInfo = jdbcTemplate.queryForObject(sql, new UserCountRowMapper());
-        return selectedUserInfo;
+        
 
     }
 
