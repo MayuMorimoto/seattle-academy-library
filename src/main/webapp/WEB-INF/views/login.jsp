@@ -27,8 +27,14 @@
                     <form method="post" action="login">
                         <div class="title">ログイン</div>
                         <label class="label">メールアドレス</label>
+                        <c:if test="${!empty loginErrorMessage1}">
+                        	<div class="error">${loginErrorMessage1}</div>
+                       	</c:if>
                         <input type="text" class="input" name="email" id="email" autocomplete="off" required/>
                         <label class="label">パスワード</label>
+                        <c:if test="${!empty loginErrorMessage2}">
+                        	<div class="error">${loginErrorMessage2}</div>
+                        </c:if>
                         <input type="password" class="input" id="password" name="password" required/>
 
                         <input type="submit" class="button primary" value="ログイン" />
