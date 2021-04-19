@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 
@@ -27,6 +28,10 @@ public class HomeController {
      */
     @RequestMapping(value = "/home", method = RequestMethod.GET)
     public String transitionHome(Model model) {
+    	//書籍データが０件の場合,メッセージ表示
+    	if(CollectionUtils.isEmpty(booksService.getBookList())) {
+    		model.addAttribute("resultMessage", "書籍はありません。");
+    	}
         model.addAttribute("bookList", booksService.getBookList());
         return "home";
     }

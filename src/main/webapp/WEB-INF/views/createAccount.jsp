@@ -26,8 +26,16 @@
                     <form method="post" action="createAccount">
                         <div class="title">アカウントの作成</div>
                         <label class="label">メールアドレス</label>
-                        <input type="email" class="input" id="email" name="email" autocomplete="off" required>
+                        <div class="error_msg">${emailValidationMessage}</div>
+                        <input  class="input" id="email" name="email" autocomplete="off" required>
                         <label class="label">パスワード</label>
+                        <div class="error_msg">${passwordValidationMessage}</div>
+                        <div class="error_msg">${passwordCheck}</div>
+<%--                         <div class="error_msg">
+                        	<c:if test="${!empty passwordCheck}">
+                        		${passwordCheck}
+                        	</c:if>
+                        </div> --%>
                         <input type="password" class="input" id="password" name="password" required>
                         <label class="label">パスワード（確認用）</label>
                         <input type="password" class="input" id="passwordForCheck" name="passwordForCheck" required>

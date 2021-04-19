@@ -1,6 +1,7 @@
 package jp.co.seattle.library.controller;
 
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,14 +55,45 @@ public class AccountController {
 
         // パラメータで受け取った書籍情報をDtoに格納する。
         UserInfo userInfo = new UserInfo();
+        
+        // email形式の正規表現
+        String emailValidation = "^[\\w!#%&'/=~`\\*\\+\\?\\{\\}\\^\\$\\-\\|]+(\\.[\\w!#%&'/=~`\\*\\+\\?\\{\\}\\^\\$\\-\\|]+)*@[\\w!#%&'/=~`\\*\\+\\?\\{\\}\\^\\$\\-\\|]+(\\.[\\w!#%&'/=~`\\*\\+\\?\\{\\}\\^\\$\\-\\|]+)*$";
+        Pattern emailPattern = Pattern.compile(emailValidation); 
+        // emailバリデーションチェック実施
+        boolean emailValidationCheckFlg = emailPattern.matcher(email).find();
+        if(!emailValidationCheckFlg) {
+        	//バリデーションチェックNG（false）の場合、エラーメッセージを画面に返す
+        	model.addAttribute("emailValidationMessage", "email形式で入力してください。");
+        	return "createAccount";
+        }
+        //メール形式チェックがOKの場合、userInfoにsetする
         userInfo.setEmail(email);
-
-
-        // TODO バリデーションチェック、パスワード一致チェック実装
-
+        
+        //半角英数字の正規表現
+        String alphanumericValidation = "^[0-9a-zA-Z]+$";
+        Pattern alphanumericPattern = Pattern.compile(alphanumericValidation);
+        //パスワード半角英数字バリデーションチェック実施
+        boolean passwordAlphanumericCheckFlg = alphanumericPattern.matcher(password).find();
+        //確認パスワード半角英数字バリデーションチェック実施
+        boolean confirmedPasswordAlphanumericCheckFlg = alphanumericPattern.matcher(passwordForCheck).find();
+        if(!passwordAlphanumericCheckFlg || !confirmedPasswordAlphanumericCheckFlg) {
+        	//パスワードまたは、確認用パスワードどちらかがバリデーションチェックNG（false）の場合、エラーメッセージを画面に返す
+        	model.addAttribute("passwordValidationMessage", "半角英数字で入力してください。");
+        	return "createAccount";
+        }      
+        
+        //パスワード一致チェック
+        //パスワードと確認用パスワードの値が異なる場合、エラーメッセージを画面に返す
+        if(!password.equals(passwordForCheck)) {
+        	model.addAttribute("passwordCheck", "パスワードが一致しません。");
+        	return "createAccount";
+        }
+        //パスワードの半角英数字チェック、確認用パスワードチェックがOKの場合、userInfoにパスワードをsetする
         userInfo.setPassword(password);
+        //serviceクラスにうせrInfoを渡す
         usersService.registUser(userInfo);
-
+        
+        //BooksServiceクラスで取得した本の一覧を画面に返す
         model.addAttribute("bookList", booksService.getBookList());
         return "home";
     }
