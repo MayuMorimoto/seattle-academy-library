@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import jp.co.seattle.library.dto.BookDetailsInfo;
 import jp.co.seattle.library.dto.BookInfo;
@@ -102,4 +103,21 @@ public class BooksService {
     	
     	return bookDetailsInfo.getBookId();
     } 
+    
+    /**
+     * 書籍を更新する
+     *
+     * @param bookInfo 書籍情報
+     */
+    public void updateBookInfo(BookDetailsInfo bookInfo) {
+    	//サムネイルを更新していない場合はサムネイルは更新しない
+    	String sql = null;
+    	if(StringUtils.isEmpty(bookInfo.getThumbnailUrl())) {
+    		sql = "update books set title = '"+ bookInfo.getTitle() + "', author = '" + bookInfo.getAuthor() + "', publisher = '" + bookInfo.getPublisher() + "', publish_date = '" + bookInfo.getPublishDate() + "', detail = '" + bookInfo.getDetail() + "', isbn = '" + bookInfo.getIsbn() + "' where id = " + bookInfo.getBookId() + ";";
+    	}else {
+    		sql = "update books set title = '"+ bookInfo.getTitle() + "', author = '" + bookInfo.getAuthor() + "', publisher = '" + bookInfo.getPublisher() + "', publish_date = '" + bookInfo.getPublishDate() + "', detail = '" + bookInfo.getDetail() + "', isbn = '" + bookInfo.getIsbn() + "', thumbnail_url = '"+ bookInfo.getThumbnailUrl() + "', thumbnail_name = '" + bookInfo.getThumbnailName() + "' where id = " + bookInfo.getBookId() + ";";
+    	}
+    	//SQL実行
+    	jdbcTemplate.update(sql);
+    }
 }
