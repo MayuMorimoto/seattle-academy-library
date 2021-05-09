@@ -1,10 +1,14 @@
 package jp.co.seattle.library.controller;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 
 import org.slf4j.Logger;
@@ -13,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
-import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -22,10 +25,6 @@ import org.springframework.web.multipart.MultipartFile;
 import jp.co.seattle.library.dto.BookDetailsInfo;
 import jp.co.seattle.library.service.BooksService;
 
-/**
- * @author morimotomayu
- *
- */
 /**
  * @author morimotomayu
  *
@@ -67,15 +66,12 @@ public class BulkAddBookController {
         
         //ファイルを読み込む
         BufferedReader br = null;
+    	//読み込んだ配列を格納するList
+    	List<String[]> contentsList = new ArrayList<String[]>();
         try {
         	InputStream stream = file.getInputStream(); 
         	Reader reader = new InputStreamReader(stream);
         	br = new BufferedReader(reader);
-        	//1行以上あるか確認（最初の1行を読み込んでnullならば、1行もない事になる）
-        	//model = checkLine(br,model);
-        	if(checkLine(br,model) != null) {
-            	return "bulkRegist";
-        	}
         	//読み込み行
         	String line;
         	//分割後のデータを保持する配列
@@ -85,9 +81,22 @@ public class BulkAddBookController {
         		//1行の中で各項目をカンマで分割し、Listに追加
         		dataList = line.split(",");
         		//booksTBLのカラム数と配列のサイズが同じであるか確認
-        		checkColumnSize(dataList,model);
-        		//DB登録      		
-        		setBookDetailsInfo(dataList);
+        		if(!checkColumnSize(dataList)) {
+                  	model.addAttribute("error","必須項目が足りません。");
+                	return "bulkRegist";
+        		};
+        		//各項目のバリデーションチェック
+        		//出版日のバリデーションチェック
+        		if(!checkPublishDate(dataList)) {
+                  	model.addAttribute("error","正しい出版日を入力してください");
+                	return "bulkRegist";
+        		}
+        		//ISBNのバリデーションチェック
+        		if(!checkIsbn(dataList)) {
+                  	model.addAttribute("error","ISBNは10桁もしくは13桁の数字で入力してください。");
+                	return "bulkRegist";
+        		}
+        		contentsList.add(dataList);
         	}
         }catch(Exception ex) {
         	ex.printStackTrace();
@@ -101,6 +110,8 @@ public class BulkAddBookController {
             	return "bulkRegist";
               }
         }
+		//DB登録      		
+		setBookDetailsInfo(contentsList);
         
         model.addAttribute("bookList", booksService.getBookList());
     	return "home";
@@ -125,66 +136,82 @@ public class BulkAddBookController {
         }
         return null;
     }
-
-    /**
-     * CSVファイルの内容チェック
-     * @param br CSV読み込み情報
-     * @param model モデル
-     * @return 一括登録画面 or null
-     */
-    public Model checkLine(BufferedReader br, Model model) throws IOException {
-        String line = br.readLine();
-        String a = "";
-        if(StringUtils.isEmpty(a)) {
-          	return model.addAttribute("error","CSVファイルの中身が空です");
-//        	return "bulkRegist";
-        }
-    	//分割後のデータを保持する配列
-    	String[] dataList;
-    	//1行の中で各項目をカンマで分割し、Listに追加
-		dataList = line.split(",");
-		//booksTBLのカラム数と配列のサイズが同じであるか確認
-		checkColumnSize(dataList,model);
-		//DB登録      		
-		setBookDetailsInfo(dataList);
-        return null;
-    }
     
     
     /**
      * CSVファイルのカラム数チェック
      * @param dataList 1行のデータ
-     * @param model モデル
-     * @return 一括登録画面 or null
+     * @return チェックフラグ
      */
-    public String checkColumnSize(String[] dataList, Model model) {
-    	//Listサイズが5であることの確認（書籍名、著者名、出版社、出版日、ISBN）
-    	if(dataList.length != 5) {
-          	model.addAttribute("error","必須項目が足りません。");
-        	return "bulkRegist";
+    private boolean checkColumnSize(String[] dataList) {
+    	//Listサイズが4以上5以下であることの確認（ISBNは任意の項目のため）
+    	if(!(dataList.length >=4 && dataList.length<= 5)) {
+    		return false;
     	}
-    	return null;
+    	//配列0番目〜3番目の値がnullではないことの確認
+    	for(int i = 0; i<=3; i++) {
+    		if(dataList[i] == null) {
+    			return false;
+    		}
+    	}
+    	return true;
     }
     
+    /**
+     * 出版日のバリデーションチェック
+     * @param dataList 1行のデータ
+     * @return チェックフラグ
+     */
+    private boolean checkPublishDate(String[] dataList) {
+    	//出版日のバリデーションチェック
+    	if (!(dataList[3].matches("[0-9]{8}"))) {
+            return false;
+        } else {
+            try {
+                DateFormat df = new SimpleDateFormat("yyyyMMdd");
+                df.setLenient(false);
+                df.parse(dataList[3]);
+            } catch (ParseException p) {
+            	return false;
+            }
+        }
+    	return true;
+    }
+    
+    /**
+     * ISBNのバリデーションチェック
+     * @param dataList 1行のデータ
+     * @return チェックフラグ
+     */
+    private boolean checkIsbn(String[] dataList) {
+    	//ISBNのバリデーションチェック
+    	if(!dataList[4].matches("([0-9]{10}|[0-9]{13})?")) {
+    		return false;
+    	}
+    	return true;
+    }
     
     /**
      * DB登録
-     * @param dataList 1行のデータ
+     * @param contentsList 全行のデータ
      */
-    public void setBookDetailsInfo (String[] dataList) {
-    	//BookDetailsInfoに格納
-    	BookDetailsInfo bookDetailsInfo = new BookDetailsInfo();
-    	//書籍名
-    	bookDetailsInfo.setTitle(dataList[0]);
-    	//著者名
-    	bookDetailsInfo.setAuthor(dataList[1]);
-    	//出版社
-    	bookDetailsInfo.setPublisher(dataList[2]);
-    	//出版日
-    	bookDetailsInfo.setPublishDate(dataList[3]);
-    	//ISBN
-    	bookDetailsInfo.setIsbn(dataList[4]);
-    	//DBに登録
-    	booksService.registBook(bookDetailsInfo);
+    public void setBookDetailsInfo (List<String[]> contentsList) {
+    	for(String[]bookDetailsInfoList : contentsList) {
+    		//BookDetailsInfoに格納
+        	BookDetailsInfo bookDetailsInfo = new BookDetailsInfo();
+        	//書籍名
+        	bookDetailsInfo.setTitle(bookDetailsInfoList[0]);
+        	//著者名
+        	bookDetailsInfo.setAuthor(bookDetailsInfoList[1]);
+        	//出版社
+        	bookDetailsInfo.setPublisher(bookDetailsInfoList[2]);
+        	//出版日
+        	bookDetailsInfo.setPublishDate(bookDetailsInfoList[3]);
+        	//ISBN
+        	bookDetailsInfo.setIsbn(bookDetailsInfoList[4]);
+        	//DBに登録
+        	booksService.registBook(bookDetailsInfo);
+    	}
+    	
     }
 }
